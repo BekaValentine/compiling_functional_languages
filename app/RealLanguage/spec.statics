@@ -1,0 +1,120 @@
+[ D !- Prog -! D' ]
+in: D, Prog. out: D'
+
+Given declarations D, program P is valid and gives rise to declarations D'
+
+
+------------ empty program
+D !- "" -! D
+
+
+D !- Stmt -! D'
+D' !- Prog -! D''
+--------------------- non-empty program
+D !- Stmt Prog -! D''
+
+
+
+
+[ D !- Stmt -! D' ] 
+in: D, Stmt. out: D'
+
+Given declarations D, statement Stmt is valid and gives rise to declarations D'
+
+
+D does not contain TN 
+---------------------------- data declaration
+D !- data TN; -! D, TN tycon
+
+
+D does not contain CN
+D !- A_i type
+D !- B type
+----------------------------------------------- constructor declaration
+D !- con CN : (A*) ~> B; -! D, CN con (A*) ~> B
+
+
+D does not contain TmN
+D !- A type
+-------------------------------- term declaration
+D !- term TmN : A; -! D, TmN : A
+
+
+D contains TmN : A
+D ; <> !- A true chk M
+-------------------------------- term definition
+D !- term TmN = M; -! D, TmN = M
+
+
+
+
+
+[ D !- A type ]
+in: D, A
+
+Given declarations D, A is a type.
+
+
+D contains TN tycon
+-------------------
+D ; G !- TN type
+
+
+D ; G !- A type
+D ; G !- B type
+-------------------- function type
+D ; G !- A -> B type
+
+
+
+
+
+[ D ; G !- A true chk M ]
+in: D, G, A, M
+
+Given declarations D and variables G, the type A true checks the term M.
+
+
+D contains CN con (B*) ~> A
+|M*| = |B*|
+D ; G !- B_i true chk M_i
+--------------------------- constructors
+D ; G !- A true chk CN(M*)
+
+
+D ; G, x : A !- B true chk M
+-------------------------------- lambdas
+G ; G !- A -> B true chk \x -> M
+
+
+D ; G !- M syn B true
+A = B
+--------------------- direction change
+D ; G !- A true chk M
+
+
+
+
+
+[ D ; G !- M syn A true ]
+in: D, G, M. out: A
+
+Given declarations D and variables G, the term M synthesizes the type A true.
+
+
+D ; G !- M_i syn A_i true
+D ; G !- Cl_j : A* clause B
+---------------------------------- case
+D ; G !- case M* of Cl* syn B true
+
+
+D ; G !- M syn A -> B true
+D ; G !- A true chk N 
+-------------------------- application
+D ; G !- M N syn B true
+
+
+D !- A type
+D ; G !- A true chk M
+--------------------------- annotation
+D ; G !- (M : A) syn A true

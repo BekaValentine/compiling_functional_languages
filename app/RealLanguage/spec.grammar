@@ -1,0 +1,108 @@
+Program Prog
+  ::= ""           (empty program)
+    | Stmt Prog    (non-empty program)
+    ;
+
+Statement Stmt
+  ::= DataDecl    (data declaration)
+    | ConDecl     (constructor declaration)
+    | TmDecl      (term declaration)
+    | TmDef       (term definition)
+    ;
+
+TypeDeclaration TyDecl
+  ::= "data" TN ";"
+    ;
+
+TypeName TN = [A-Z][a-zA-Z0-9_]*;
+
+ConstructorDeclaration ConDecl
+  ::= "con" CN ":" CSig ";"
+    ;
+
+ConstructorName CN = [A-Z][a-zA-Z0-9_]*
+
+ConstructorSignature CSig
+  ::= CArgTys "~>" A
+    ;
+
+ConstructorArgumentTypes CArgTys
+  ::= "(" ")"                (empty constructor arg types)
+    | "(" CArgTyParts ")"    (non-empty constructor arg types)
+    ;
+
+ConstructorArgumentTypeParts CArgTyParts
+  ::= A                    (last constructor arg type)
+    | A "," CArgTyParts    (non-last constructor arg type)
+    ;
+
+Type A, B
+  ::= TN           (constructed type)
+    | A "->" B     (function type)
+    | "(" A ")"    (parenthesized type)
+    ;
+
+TermDeclaration TmDecl
+  ::= "term" TmN ":" A ";"
+    ;
+
+TermDefinition TmDef
+  ::= "term" TmN "=" M ";"
+    ;
+
+TermName TmN = \$[a-z][a-zA-Z0-9_]*;
+
+Term M, N
+  ::= v                       (variable)
+    | TmN                     (declared term name)
+    | CN "(" CArgs ")"        (constructed term)
+    | "case" Scrs "of" Cls    (case term)
+    | "\" vn "->" M           (lambda)
+    | M N                     (application)
+    | "(" M ")"               (parenthesized term)
+    | M ":" A                 (annotation)
+    ;
+
+ConstructorArguments CArgs
+  ::= ""           (empty constructor args)
+    | CArgParts    (non-empty constructor args)
+    ;
+
+ConstructorArgumentParts CArgParts
+  ::= M                  (last constructor arg)
+    | M "," CArgParts    (non-last constructor arg)
+    ;
+
+Scrutinees Scrs
+  ::= M            (last scrutinee)
+    | M "|" Scrs   ("non-last scrutinee)
+    ;
+
+Clauses Cls
+  ::= Cl        (last clause)
+    | Cl Cls    (non-last clause)
+    ;
+
+Clause Cl
+  ::= "|" Ps "->" M
+    ;
+
+Patterns Ps
+  ::= P           (last pattern)
+    | P "|" Ps    (non-last pattern)
+    ;
+
+Pattern P
+  ::= CN "(" PArgs ")"    (constructor pattern)
+    | vn                  (variable pattern)
+    ;
+
+PatternArguments PArgs
+  ::= ""           (empty pattern args)
+    | PArgParts    (non-empty pattern args)
+    ;
+
+PatternArgumentParts PArgParts
+  ::= P                  (last pattern arg)
+    | P "," PArgParts    (non-last pattern arg)
+    ;

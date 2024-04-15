@@ -1,0 +1,29 @@
+data Nat;
+con Zero : () ~> Nat;
+con Suc : (Nat) ~> Nat;
+
+term $plus : Nat -> (Nat -> Nat);
+term $plus = \x -> \y ->
+  case x of
+    | Zero() -> y
+    | Suc(x') -> Suc($plus x' y)
+    ;
+
+data NatList;
+con Nil : () ~> NatList;
+con Cons : (Nat, NatList) ~> NatList;
+
+term $lengthNatList : NatList -> Nat;
+term $mapNatList : (Nat -> Nat) -> (NatList -> NatList);
+
+term $lengthNatList = \xs ->
+  case xs of
+    | Nil() -> Zero()
+    | Cons(x,xs') -> Suc($lengthNatList(xs'))
+    ;
+
+term $mapNatList = \f -> \xs ->
+  case xs of
+    | Nil() -> Nil()
+    | Cons(x,xs') -> Cons(f x, $mapNatList f xs')
+    ;
