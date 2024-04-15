@@ -36,7 +36,7 @@ compile (Let n x y) = compile x ++ [LET n] ++ compile y ++ [FREE n]
 compile (Var n) = [VAR n]
 compile (DeclaredName n) = [DECLAREDNAME n]
 
-type ExecState = (GlobalEnv, Env, ReturnStack)
+type ExecState = (GlobalEnv, Env, ReturnStack, [String])
 type Execution a = StateT ExecState (Either String) a
 
 execTerm :: Term -> Execution Value
@@ -44,44 +44,57 @@ execTerm x = exec (compile x)
 
 pop :: Execution Value
 pop = do
-    (_, _, ret) <- get
+    (genv, env, ret, log) <- get
     case ret of
-        v:_ -> return v
+        v:ret' -> do
+            put (genv, env, ret', log)
+            return v
         _ -> throwError "Not enough values!"
 
 push :: Value -> Execution ()
 push v = do
-    (genv, env, ret) <- get
-    put (genv, env, v:ret)
+    (genv, env, ret, log) <- get
+    put (genv, env, v:ret, log)
 
 lookupVar :: Name -> Execution ()
 lookupVar n = do
-    (_, env, _) <- get
+    (_, env, _, log) <- get
     case lookup n env of
         Nothing -> throwError "Unbound variable"
         Just v -> push v
 
 lookupDeclaredName :: Name -> Execution ()
 lookupDeclaredName n = do
-    (genv, _, _) <- get
+    (genv, _, _, _) <- get
     case lookup n genv of
         Nothing -> throwError "Unknown defined name"
         Just v -> push v
 
 bind :: Name -> Value -> Execution ()
 bind n v = do
-    (genv, env, ret) <- get
-    put (genv, (n,v):env, ret)
+    (genv, env, ret, log) <- get
+    put (genv, (n,v):env, ret, log)
 
 free :: Name -> Execution ()
 free n = do
-    (genv, env, ret) <- get
+    (genv, env, ret, log) <- get
     case env of
-        (n',_):env' | n == n' -> put (genv, env', ret)
-        _ -> put (genv, env, ret)
+        (n',_):env' | n == n' -> put (genv, env', ret, log)
+        _ -> put (genv, env, ret, log)
+
+logMsg :: String -> Execution ()
+logMsg msg = do
+    (genv, env, ret, log) <- get
+    put (genv, env, ret, (msg:log))
 
 exec0 :: Code -> Either String Value
-exec0 code = fmap fst (runStateT (exec code) ([], [], []))
+exec0 code = fmap fst (runStateT (exec code) ([], [], [], []))
+
+exec0' :: Code -> Either String (Value, [String])
+exec0' code =
+    case runStateT (exec code) ([], [], [], []) of
+        Left err -> Left err
+        Right (v, (_, _, _, log)) -> Right (v, log)
 
 exec :: Code -> Execution Value
 exec [] = pop
@@ -91,6 +104,7 @@ exec (NUMBER i:code) = do
 exec (PLUS:code) = do
     v <- pop
     u <- pop
+    logMsg (show v ++ ", " ++ show u)
     case (u, v) of
         (NumberVal u', NumberVal v') -> do
             push (NumberVal (u' + v'))

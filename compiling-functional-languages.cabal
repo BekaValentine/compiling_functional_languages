@@ -69,7 +69,9 @@ executable compiling-functional-languages
         ExampleLanguage.Flattened2,
         LambdaCalculus.Main,
         LambdaCalculus.Basic.Syntax,
-        LambdaCalculus.Basic.BigStep
+        LambdaCalculus.Basic.BigStep,
+        LambdaCalculus.DeBruijn.Syntax,
+        LambdaCalculus.DeBruijn.BigStep
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

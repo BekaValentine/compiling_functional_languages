@@ -15,7 +15,7 @@ main = do
     print (execProgram0 ex)
     print (compile extm)
     print (C.exec (Running [] [] [] (C.compile extm)))
-    print (CM.exec0 (CM.compile extm))
+    print (CM.exec0' (CM.compile extm))
     print (F1.exec0 (F1.compile extm))
     print (F2.exec0 (F2.compile extm))
 

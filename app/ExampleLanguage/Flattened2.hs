@@ -49,9 +49,11 @@ execTerm x = exec (compile x)
 
 pop :: Execution Value
 pop = do
-    (_, _, ret) <- get
+    (genv, env, ret) <- get
     case ret of
-        v:_ -> return v
+        v:ret' -> do
+            put (genv, env, ret')
+            return v
         _ -> throwError "Not enough values!"
 
 push :: Value -> Execution ()
