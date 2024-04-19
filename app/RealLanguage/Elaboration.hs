@@ -68,10 +68,10 @@ runElab (Instr i k) = case i of
         -- goal. It's defined in terms of some more isolated little functions
         -- for each kind of goal.
         prove :: Goal r -> Elab r
-        prove (ProgramValid d p) = programValid d p
+        prove (ProgramValid d p)   = programValid d p
         prove (StatementValid d s) = statementValid d s
-        prove (TypeValid d a) = typeValid d a
-        prove (CheckTerm d a m) = checkTerm d a m
+        prove (TypeValid d a)      = typeValid d a
+        prove (CheckTerm d a m)    = checkTerm d a m
         prove (SynthesizeTerm d m) = synthesizeTerm d m
 
 
