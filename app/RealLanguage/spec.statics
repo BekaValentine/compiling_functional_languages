@@ -58,13 +58,13 @@ Given declarations D, A is a type.
 
 D contains TN tycon
 -------------------
-D ; G !- TN type
+D !- TN type
 
 
-D ; G !- A type
-D ; G !- B type
--------------------- function type
-D ; G !- A -> B type
+D !- A type
+D !- B type
+---------------- function type
+D !- A -> B type
 
 
 

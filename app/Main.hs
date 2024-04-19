@@ -1,9 +1,12 @@
 module Main where
 
--- import qualified ExampleLanguage.Main as EL
-import qualified LambdaCalculus.Main as LC
+import RealLanguage.Syntax
+import RealLanguage.Elaboration
 
 main :: IO ()
 main = do
-    -- EL.main
-    LC.main
+    print $ runElab (prove (TypeValid d (ConTy (TypeName "Float"))))
+    where
+        d = [
+            ("Int", TypeNameExists)
+            ]

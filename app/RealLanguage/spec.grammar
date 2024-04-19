@@ -10,7 +10,7 @@ Statement Stmt
     | TmDef       (term definition)
     ;
 
-TypeDeclaration TyDecl
+DataDeclaration DataDecl
   ::= "data" TN ";"
     ;
 

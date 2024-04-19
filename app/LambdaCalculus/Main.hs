@@ -31,6 +31,9 @@ ex = [
                 (DeclaredName "foo"))
         ]
 
+{-
+(\. if `0 1 2) false
+-}
 dbtm :: DB.Term
 dbtm = DB.Apply
             (DB.Lambda

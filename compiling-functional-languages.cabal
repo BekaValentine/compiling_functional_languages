@@ -71,7 +71,10 @@ executable compiling-functional-languages
         LambdaCalculus.Basic.Syntax,
         LambdaCalculus.Basic.BigStep,
         LambdaCalculus.DeBruijn.Syntax,
-        LambdaCalculus.DeBruijn.BigStep
+        LambdaCalculus.DeBruijn.BigStep,
+        RealLanguage.Operational,
+        RealLanguage.Syntax,
+        RealLanguage.Elaboration
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
