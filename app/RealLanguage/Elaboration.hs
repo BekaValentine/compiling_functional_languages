@@ -193,7 +193,6 @@ typeValid d (FunTy b c) =
 -- A = B
 -- --------------------- direction change
 -- D ; G !- A true chk M
-
 checkTerm :: Declarations
           -> Type
           -> Term
