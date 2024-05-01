@@ -76,7 +76,8 @@ in: D, G, A, M
 Given declarations D and variables G, the type A true checks the term M.
 
 
-D contains CN con (B*) ~> A
+D contains (CN con (B*) ~> A')
+A = A'
 |M*| = |B*|
 D ; G !- B_i true chk M_i
 --------------------------- constructors
@@ -85,7 +86,7 @@ D ; G !- A true chk CN(M*)
 
 D ; G, x : A !- B true chk M
 -------------------------------- lambdas
-G ; G !- A -> B true chk \x -> M
+D ; G !- A -> B true chk \x -> M
 
 
 D ; G !- M syn B true
@@ -104,7 +105,8 @@ Given declarations D and variables G, the term M synthesizes the type A true.
 
 
 D ; G !- M_i syn A_i true
-D ; G !- Cl_j : A* clause B
+D ; G !- Cl_j : A* clause B_j
+B* all same
 ---------------------------------- case
 D ; G !- case M* of Cl* syn B true
 
@@ -119,3 +121,38 @@ D !- A type
 D ; G !- A true chk M
 --------------------------- annotation
 D ; G !- (M : A) syn A true
+
+
+G contains x : A
+--------------------- var
+D ; G !- x syn A true
+
+
+
+[ D ; G !- Cl : A* clause B ]
+in: D, G, Cl, A*. out: B.
+
+
+|P*| = |A*|
+D ; G !- P_i : A_i pattern G'
+D ; G, G' !- N syn B true
+------------------------------ clause
+D ; G !- P* -> N : A* clause B
+
+
+
+
+
+[ D ; G !- P : A pattern G' ]
+in: D, G, P, A. out: G'.
+
+D contains CN consig B* ~> A'
+|P*| = |B*|
+A' = A
+P* distinct vars
+D ; G !- P_i : B_i pattern G'_i
+------------------------------- conpat
+D ; G !- CN(P*) : A pattern G'*
+
+------------------------------
+D ; G !- vn : A pattern vn : A

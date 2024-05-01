@@ -12,7 +12,7 @@ data Statement
     deriving (Show)
     
 newtype TypeName = TypeName String
-    deriving (Show)
+    deriving (Show, Eq)
 
 newtype ConName = ConName String
     deriving (Show)
@@ -26,7 +26,7 @@ data ConSig = ConSig [Type] Type
 data Type
     = ConTy TypeName
     | FunTy Type Type
-    deriving (Show)
+    deriving (Show, Eq)
 
 data Term
     = Var VarName
@@ -39,7 +39,7 @@ data Term
     deriving (Show)
 
 newtype VarName = VarName String
-    deriving (Show)
+    deriving (Show, Eq)
 
 data Clause
     = Clause [Pattern] Term
@@ -49,3 +49,8 @@ data Pattern
     = VarPat VarName
     | ConPat ConName [Pattern]
     deriving (Show)
+
+
+patternVars :: Pattern -> [VarName]
+patternVars (VarPat vn) = [vn]
+patternVars (ConPat _ ps) = ps >>= patternVars

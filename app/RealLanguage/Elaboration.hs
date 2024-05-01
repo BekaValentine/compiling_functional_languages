@@ -2,6 +2,9 @@
 
 module RealLanguage.Elaboration where
 
+import Control.Monad (when, zipWithM, zipWithM_)
+import Data.List ((\\), nub)
+
 import RealLanguage.Operational
 import RealLanguage.Syntax
 
@@ -11,6 +14,8 @@ data Declaration
     | ConNameExists ConSig
     | TermNameExists Type (Maybe Term)
     deriving (Show)
+
+type Context = [(VarName, Type)]
 
 data ElabInstr r
     = Throw ElabError
@@ -35,11 +40,34 @@ data Goal r where
 
     -- [ D ; G !- A true chk M ]
     -- in: D, G, A, M
-    CheckTerm :: Declarations -> Type -> Term -> Goal ()
+    CheckTerm :: Declarations
+              -> Context
+              -> Type
+              -> Term
+              -> Goal ()
 
     -- [ D ; G !- M syn A true ]
     -- in: D, G, M. out: A
-    SynthesizeTerm :: Declarations -> Term -> Goal Type
+    SynthesizeTerm :: Declarations
+                   -> Context
+                   -> Term
+                   -> Goal Type
+
+    -- [ D ; G !- Cl : A* clause B ]
+    -- in: D, G, Cl, A*. out: B.
+    CheckClause :: Declarations
+                -> Context
+                -> [Type]
+                -> Clause
+                -> Goal Type
+    
+    -- [ D ; G !- P : A pattern G' ]
+    -- in: D, G, P, A. out: G'.
+    CheckPattern :: Declarations
+                 -> Context
+                 -> Pattern
+                 -> Type
+                 -> Goal Context
 
 data ElabError
     = TypeNameAlreadyUsed TypeName
@@ -47,6 +75,20 @@ data ElabError
     | InvalidType Type
     | TermNameAlreadyUsed TermName
     | TermNameNotDeclared TermName
+    | DirectionChangeTypeMismatch Type Type Term
+    | NameNotAConName String
+    | ConNameNotDeclared String
+    | ConstructorMismatchReturnType Type Type Term
+    | ConstructorMismatchNumberArguments Term Int Int
+    | ApplicationNonFunctionType Term Type
+    | CaseStatementNoClauses Term
+    | MismatchedClauseTypes Term
+    | UnknownVariable VarName
+    | CannotSynthesize Term
+    | MismatchedPatternLength Clause Int Int
+    | ConstructorMismatchNumberArgumentsPattern Pattern Int Int
+    | ConstructorMismatchReturnTypePattern Type Type Pattern
+    | RepeatedPatternVariables Pattern [VarName]
     deriving (Show)
 
 type Elab = Operational ElabInstr
@@ -55,7 +97,7 @@ throw :: ElabError -> Elab r
 throw = exec . Throw
 
 goal :: Goal r -> Elab r
-goal g = exec (Prove g)
+goal = exec . Prove
 
 runElab :: Elab r -> Either ElabError r
 runElab (Ret x) = Right x
@@ -68,11 +110,13 @@ runElab (Instr i k) = case i of
         -- goal. It's defined in terms of some more isolated little functions
         -- for each kind of goal.
         prove :: Goal r -> Elab r
-        prove (ProgramValid d p)   = programValid d p
-        prove (StatementValid d s) = statementValid d s
-        prove (TypeValid d a)      = typeValid d a
-        prove (CheckTerm d a m)    = checkTerm d a m
-        prove (SynthesizeTerm d m) = synthesizeTerm d m
+        prove (ProgramValid d p)      = programValid d p
+        prove (StatementValid d s)    = statementValid d s
+        prove (TypeValid d a)         = typeValid d a
+        prove (CheckTerm d g a m)     = checkTerm d g a m
+        prove (SynthesizeTerm d g m)  = synthesizeTerm d g m
+        prove (CheckClause d g cl as) = checkClause d g cl as
+        prove (CheckPattern d g p a)  = checkPattern d g p a
 
 
 
@@ -96,8 +140,8 @@ programValid d (Program []) =
     return d
 programValid d (Program (s:ss)) =
     do
-        goal (StatementValid d s)
-        goal (ProgramValid d (Program ss)) 
+        d' <- goal (StatementValid d s)
+        goal (ProgramValid d' (Program ss)) 
 
 
 -- [ D !- Stmt -! D' ] 
@@ -127,10 +171,12 @@ programValid d (Program (s:ss)) =
 statementValid :: Declarations
                -> Statement
                -> Elab Declarations
+
 statementValid d (DataDecl (TypeName tn)) =
     case lookup tn d of
         Just _ -> throw (TypeNameAlreadyUsed (TypeName tn))
         Nothing -> return ((tn, TypeNameExists) : d)
+
 statementValid d (ConDecl (ConName cn) csig@(ConSig as b)) =
     case lookup cn d of
         Just _ -> throw (ConstructorNameAlreadyUsed (ConName cn))
@@ -138,16 +184,18 @@ statementValid d (ConDecl (ConName cn) csig@(ConSig as b)) =
             mapM_ (goal . TypeValid d) as
             goal (TypeValid d b)
             return ((cn, ConNameExists csig):d)
+
 statementValid d (TermDecl (TermName tmn) a) =
     case lookup tmn d of
         Just _ -> throw (TermNameAlreadyUsed (TermName tmn))
         Nothing -> do
             goal (TypeValid d a)
             return ((tmn, TermNameExists a Nothing):d)
+
 statementValid d (TermDef (TermName tmn) m) =
     case lookup tmn d of
         Just (TermNameExists a Nothing) -> do
-            goal (CheckTerm d a m)
+            goal (CheckTerm d [] a m)
             return ((tmn, TermNameExists a (Just m)):d)
         Nothing -> throw (TermNameNotDeclared (TermName tmn))
         Just _ -> throw (TermNameAlreadyUsed (TermName tmn))
@@ -198,11 +246,29 @@ typeValid d (FunTy b c) =
 -- --------------------- direction change
 -- D ; G !- A true chk M
 checkTerm :: Declarations
+          -> Context
           -> Type
           -> Term
           -> Elab ()
-checkTerm d a m = _
-
+checkTerm d g a m@(Con (ConName cn) ms) =
+    case lookup cn d of
+        Just (ConNameExists (ConSig bs a')) ->
+            if a /= a'
+            then throw (ConstructorMismatchReturnType a a' m)
+            else if length ms /= length bs
+            then throw (ConstructorMismatchNumberArguments m (length ms) (length bs))
+            else zipWithM_
+                   (\bi mi -> goal (CheckTerm d g bi mi))
+                   bs
+                   ms
+        Just _ -> throw (NameNotAConName cn)
+        Nothing -> throw (ConNameNotDeclared cn)
+checkTerm d g (FunTy a b) (Lambda x m) =
+    goal (CheckTerm d ((x,a):g) b m)
+checkTerm d g a m =
+    do
+        b <- goal (SynthesizeTerm d g m)
+        when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
 
 
 -- [ D ; G !- M syn A true ]
@@ -225,6 +291,105 @@ checkTerm d a m = _
 -- --------------------------- annotation
 -- D ; G !- (M : A) syn A true
 synthesizeTerm :: Declarations
+               -> Context
                -> Term
                -> Elab Type
-synthesizeTerm d m = _
+
+synthesizeTerm d g m@(Case ms cls) =
+    case cls of
+        [] -> throw (CaseStatementNoClauses m)
+        _ -> do
+            as <- mapM (goal . SynthesizeTerm d g) ms
+            bs <- mapM (goal . CheckClause d g as) cls
+            let b = head bs
+            if (any (b /=) bs)
+                then throw (MismatchedClauseTypes m)
+                else return b
+
+
+synthesizeTerm d g m'@(Apply m n) =
+    do
+        t <- goal (SynthesizeTerm d g m)
+        case t of
+            FunTy a b ->
+                do
+                    goal (CheckTerm d g a n)
+                    return b
+            _ -> throw (ApplicationNonFunctionType m' t)
+
+synthesizeTerm d g (Ann m a) =
+    do
+        goal (TypeValid d a)
+        goal (CheckTerm d g a m)
+        return a
+
+synthesizeTerm d g (Var vn) =
+    case lookup vn g of
+        Just a -> return a
+        Nothing -> throw (UnknownVariable vn)
+
+synthesizeTerm d g m =
+    throw (CannotSynthesize m)
+
+
+-- [ D ; G !- Cl : A* clause B ]
+-- in: D, G, Cl, A*. out: B.
+--
+-- |P*| = |A*|
+-- D ; G !- P_i : A_i pattern G'
+-- D ; G, G' !- N syn B true
+-- ------------------------------ clause
+-- D ; G !- P* -> N : A* clause B
+
+checkClause :: Declarations
+            -> Context
+            -> [Type]
+            -> Clause
+            -> Elab Type
+checkClause d g as cl@(Clause ps n) =
+    if length ps /= length as
+    then throw (MismatchedPatternLength cl (length ps) (length as))
+    else do
+        gs' <- zipWithM (\pi ai -> goal (CheckPattern d g pi ai)) ps as 
+        goal (SynthesizeTerm d (g ++ concat gs') n)
+
+
+-- [ D ; G !- P : A pattern G' ]
+-- in: D, G, P, A. out: G'.
+--
+-- D contains CN consig B* ~> A'
+-- |P*| = |B*|
+-- A' = A
+-- P* distinct vars
+-- D ; G !- P_i : B_i pattern G'_i
+-- ------------------------------- conpat
+-- D ; G !- CN(P*) : A pattern G'*
+--
+-- ------------------------------
+-- D ; G !- vn : A pattern vn : A
+
+checkPattern :: Declarations
+             -> Context
+             -> Pattern
+             -> Type
+             -> Elab Context
+
+checkPattern d g p@(ConPat (ConName cn) ps) a =
+    case lookup cn d of
+        Just (ConNameExists (ConSig bs a')) ->
+            if length ps /= length bs
+            then throw (ConstructorMismatchNumberArgumentsPattern p (length ps) (length bs))
+            else if a /= a'
+            then throw (ConstructorMismatchReturnTypePattern a a' p)
+            else let vs = ps >>= patternVars
+                     fvs = nub vs
+            in if vs /= fvs
+            then throw (RepeatedPatternVariables p (vs \\ fvs))
+            else do
+                gs' <- zipWithM (\pi bi -> goal (CheckPattern d g pi bi)) ps bs
+                return (concat gs')
+        Just _ -> throw (NameNotAConName cn)
+        Nothing -> throw (ConNameNotDeclared cn)
+
+checkPattern d g (VarPat vn) a =
+    return [(vn, a)]

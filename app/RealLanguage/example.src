@@ -27,3 +27,16 @@ term $mapNatList = \f -> \xs ->
     | Nil() -> Nil()
     | Cons(x,xs') -> Cons(f x, $mapNatList f xs')
     ;
+
+term $zip
+    : List(a)
+    -> List(b)
+    -> List(Prod(a,b))
+    ;
+
+term $zip
+ = \xs -> \ys ->
+    case xs | ys
+    | Cons(x,xs') | Cons(y,xs') -> Cons(Pair(x,y), #$zip xs' xs')
+    | _           | _           -> Nil()
+    ;
