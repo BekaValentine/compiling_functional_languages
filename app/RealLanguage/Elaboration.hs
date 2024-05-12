@@ -103,20 +103,20 @@ runElab :: Elab r -> Either ElabError r
 runElab (Ret x) = Right x
 runElab (Instr i k) = case i of
     Throw err -> Left err
-    Prove g -> runElab (prove g >>= k)
+    Prove g -> runElab (decompose g >>= k)
     
     where
-        -- `prove` is used to decompose a goal into a means of elaborating the 
-        -- goal. It's defined in terms of some more isolated little functions
-        -- for each kind of goal.
-        prove :: Goal r -> Elab r
-        prove (ProgramValid d p)      = programValid d p
-        prove (StatementValid d s)    = statementValid d s
-        prove (TypeValid d a)         = typeValid d a
-        prove (CheckTerm d g a m)     = checkTerm d g a m
-        prove (SynthesizeTerm d g m)  = synthesizeTerm d g m
-        prove (CheckClause d g cl as) = checkClause d g cl as
-        prove (CheckPattern d g p a)  = checkPattern d g p a
+        -- `decompose` is used to decompose a goal into a means of elaborating
+        -- the goal. It's defined in terms of some more isolated little
+        -- functions for each kind of goal.
+        decompose :: Goal r -> Elab r
+        decompose (ProgramValid d p)      = programValid d p
+        decompose (StatementValid d s)    = statementValid d s
+        decompose (TypeValid d a)         = typeValid d a
+        decompose (CheckTerm d g a m)     = checkTerm d g a m
+        decompose (SynthesizeTerm d g m)  = synthesizeTerm d g m
+        decompose (CheckClause d g cl as) = checkClause d g cl as
+        decompose (CheckPattern d g p a)  = checkPattern d g p a
 
 
 
@@ -290,10 +290,28 @@ checkTerm d g a m =
 -- D ; G !- A true chk M
 -- --------------------------- annotation
 -- D ; G !- (M : A) syn A true
+--
+-- D contains TmN : A
+-- ----------------------- term name
+-- D ; G !- TmN syn A true
 synthesizeTerm :: Declarations
                -> Context
                -> Term
                -> Elab Type
+
+synthesizeTerm d g m@(Con (ConName cn) ms) =
+    case lookup cn d of
+        Just (ConNameExists (ConSig bs a)) ->
+            if length ms /= length bs
+            then throw (ConstructorMismatchNumberArguments m (length ms) (length bs))
+            else do
+                zipWithM_
+                   (\bi mi -> goal (CheckTerm d g bi mi))
+                   bs
+                   ms
+                return a
+        Just _ -> throw (NameNotAConName cn)
+        Nothing -> throw (ConNameNotDeclared cn)
 
 synthesizeTerm d g m@(Case ms cls) =
     case cls of
@@ -327,6 +345,11 @@ synthesizeTerm d g (Var vn) =
     case lookup vn g of
         Just a -> return a
         Nothing -> throw (UnknownVariable vn)
+
+synthesizeTerm d g (DefVar (TermName tn)) =
+    case lookup tn d of
+        Just (TermNameExists a _) -> return a
+        Nothing -> throw (TermNameNotDeclared (TermName tn))
 
 synthesizeTerm d g m =
     throw (CannotSynthesize m)

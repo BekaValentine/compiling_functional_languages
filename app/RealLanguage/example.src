@@ -6,7 +6,7 @@ term $plus : Nat -> (Nat -> Nat);
 term $plus = \x -> \y ->
   case x of
     | Zero() -> y
-    | Suc(x') -> Suc($plus x' y)
+    | Suc(x1) -> Suc($plus x1 y)
     ;
 
 data NatList;
@@ -19,24 +19,11 @@ term $mapNatList : (Nat -> Nat) -> (NatList -> NatList);
 term $lengthNatList = \xs ->
   case xs of
     | Nil() -> Zero()
-    | Cons(x,xs') -> Suc($lengthNatList(xs'))
+    | Cons(x,xs1) -> Suc($lengthNatList(xs1))
     ;
 
 term $mapNatList = \f -> \xs ->
   case xs of
     | Nil() -> Nil()
-    | Cons(x,xs') -> Cons(f x, $mapNatList f xs')
-    ;
-
-term $zip
-    : List(a)
-    -> List(b)
-    -> List(Prod(a,b))
-    ;
-
-term $zip
- = \xs -> \ys ->
-    case xs | ys
-    | Cons(x,xs') | Cons(y,xs') -> Cons(Pair(x,y), #$zip xs' xs')
-    | _           | _           -> Nil()
+    | Cons(x,xs1) -> Cons(f x, $mapNatList f xs1)
     ;
