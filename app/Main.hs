@@ -1,6 +1,6 @@
 module Main where
 
--- import RealLanguage.Syntax
+-- import RealLanguage.Surface
 import qualified RealLanguage.Elaboration as RE
 import qualified RealLanguage.Example as RE
 import qualified RealLanguage.Parser as P

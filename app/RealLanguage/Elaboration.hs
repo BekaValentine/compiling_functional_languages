@@ -5,8 +5,10 @@ module RealLanguage.Elaboration where
 import Control.Monad (when, zipWithM, zipWithM_)
 import Data.List ((\\), nub)
 
+import RealLanguage.Names
 import RealLanguage.Operational
-import RealLanguage.Syntax
+import RealLanguage.Surface
+import RealLanguage.Types
 
 type Declarations = [(String,Declaration)]
 data Declaration

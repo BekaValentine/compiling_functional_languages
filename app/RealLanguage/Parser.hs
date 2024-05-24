@@ -7,7 +7,9 @@ import qualified Text.Megaparsec as MP
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
-import qualified RealLanguage.Syntax as S
+import qualified RealLanguage.Surface as S
+import qualified RealLanguage.Names as S
+import qualified RealLanguage.Types as S
 
 parse :: String -> Parser a -> String -> Either String a
 parse path parser input =

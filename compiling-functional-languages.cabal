@@ -73,10 +73,13 @@ executable compiling-functional-languages
         LambdaCalculus.DeBruijn.Syntax,
         LambdaCalculus.DeBruijn.BigStep,
         RealLanguage.Operational,
-        RealLanguage.Syntax,
+        RealLanguage.Names,
+        RealLanguage.Types,
+        RealLanguage.Surface,
         RealLanguage.Elaboration,
         RealLanguage.Example,
         RealLanguage.Parser,
+        RealLanguage.Core,
         ProofDevelopment.HuttonsRazor
 
     -- LANGUAGE extensions used by modules in this package.

@@ -27,3 +27,6 @@ term $mapNatList = \f -> \xs ->
     | Nil() -> Nil()
     | Cons(x,xs1) -> Cons(f x, $mapNatList f xs1)
     ;
+
+term $foo : Nat;
+term $foo = $plus Suc(Zero()) Suc(Zero());

@@ -1,6 +1,8 @@
 module RealLanguage.Example where
 
-import RealLanguage.Syntax
+import RealLanguage.Surface
+import RealLanguage.Names
+import RealLanguage.Types
 
 {-
 data Nat;
