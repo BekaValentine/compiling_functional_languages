@@ -9,12 +9,13 @@ import RealLanguage.Names
 import RealLanguage.Operational
 import RealLanguage.Surface
 import RealLanguage.Types
+import qualified RealLanguage.Core as Core
 
 type Declarations = [(String,Declaration)]
 data Declaration
     = TypeNameExists
     | ConNameExists ConSig
-    | TermNameExists Type (Maybe Term)
+    | TermNameExists Type (Maybe Core.Term)
     deriving (Show)
 
 type Context = [(VarName, Type)]
@@ -46,14 +47,14 @@ data Goal r where
               -> Context
               -> Type
               -> Term
-              -> Goal ()
+              -> Goal Core.Term
 
     -- [ D ; G !- M syn A true ]
     -- in: D, G, M. out: A
     SynthesizeTerm :: Declarations
                    -> Context
                    -> Term
-                   -> Goal Type
+                   -> Goal (Core.Term, Type)
 
     -- [ D ; G !- Cl : A* clause B ]
     -- in: D, G, Cl, A*. out: B.
@@ -61,7 +62,7 @@ data Goal r where
                 -> Context
                 -> [Type]
                 -> Clause
-                -> Goal Type
+                -> Goal (Core.Clause, Type)
     
     -- [ D ; G !- P : A pattern G' ]
     -- in: D, G, P, A. out: G'.
@@ -69,7 +70,7 @@ data Goal r where
                  -> Context
                  -> Pattern
                  -> Type
-                 -> Goal Context
+                 -> Goal (Core.Pattern, Context)
 
 data ElabError
     = TypeNameAlreadyUsed TypeName
@@ -251,7 +252,7 @@ checkTerm :: Declarations
           -> Context
           -> Type
           -> Term
-          -> Elab ()
+          -> Elab Core.Term
 checkTerm d g a m@(Con (ConName cn) ms) =
     case lookup cn d of
         Just (ConNameExists (ConSig bs a')) ->
@@ -299,7 +300,7 @@ checkTerm d g a m =
 synthesizeTerm :: Declarations
                -> Context
                -> Term
-               -> Elab Type
+               -> Elab (Core.Term, Type)
 
 synthesizeTerm d g m@(Con (ConName cn) ms) =
     case lookup cn d of
@@ -370,7 +371,7 @@ checkClause :: Declarations
             -> Context
             -> [Type]
             -> Clause
-            -> Elab Type
+            -> Elab (Core.Clause, Type)
 checkClause d g as cl@(Clause ps n) =
     if length ps /= length as
     then throw (MismatchedPatternLength cl (length ps) (length as))
@@ -397,7 +398,7 @@ checkPattern :: Declarations
              -> Context
              -> Pattern
              -> Type
-             -> Elab Context
+             -> Elab (Core.Pattern, Context)
 
 checkPattern d g p@(ConPat (ConName cn) ps) a =
     case lookup cn d of
