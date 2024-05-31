@@ -11,7 +11,7 @@ main = do
     print RE.program
 
     putStrLn (take 20 (repeat '-'))
-    print $ RE.runElab (RE.goal gl)
+    print $ RE.runElab0 (RE.goal gl)
 
     putStrLn (take 20 (repeat '-'))
     let path = "./app/RealLanguage/example.src"
@@ -19,7 +19,7 @@ main = do
     case P.parse path P.program src of
         Left err -> putStrLn err
         Right prog ->
-            print $ RE.runElab (RE.goal (RE.ProgramValid [] prog))
+            print $ RE.runElab0 (RE.goal (RE.ProgramValid [] prog))
      
     where
         d = []

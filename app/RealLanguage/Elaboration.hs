@@ -2,7 +2,7 @@
 
 module RealLanguage.Elaboration where
 
-import Control.Monad (when, zipWithM, zipWithM_)
+import Control.Monad (when, zipWithM,)
 import Data.List ((\\), nub)
 
 import RealLanguage.Names
@@ -18,11 +18,17 @@ data Declaration
     | TermNameExists Type (Maybe Core.Term)
     deriving (Show)
 
+type Functions = [(String,Function)]
+data Function
+    = Function [VarName] Core.Term
+    deriving (Show)
+
 type Context = [(VarName, Type)]
 
-data ElabInstr r
-    = Throw ElabError
-    | Prove (Goal r)
+data ElabInstr r where
+    Throw :: ElabError -> ElabInstr r
+    Prove :: Goal r -> ElabInstr r
+    NewFunction :: [VarName] -> Core.Term -> ElabInstr FunName
 
 data Goal r where
     -- [ D !- Prog -! D' ]
@@ -102,11 +108,21 @@ throw = exec . Throw
 goal :: Goal r -> Elab r
 goal = exec . Prove
 
-runElab :: Elab r -> Either ElabError r
-runElab (Ret x) = Right x
-runElab (Instr i k) = case i of
+newFunction :: [VarName] -> Core.Term -> Elab FunName
+newFunction params body = exec (NewFunction params body)
+
+runElab0 :: Elab r -> Either ElabError (Functions, r)
+runElab0 = runElab [] 0
+
+runElab :: Functions -> Int -> Elab r -> Either ElabError (Functions, r)
+runElab funs nextFun (Ret x) = Right (funs, x)
+runElab funs nextFun (Instr i k) = case i of
     Throw err -> Left err
-    Prove g -> runElab (decompose g >>= k)
+    Prove g -> runElab funs nextFun (decompose g >>= k)
+    NewFunction params body ->
+        let fn = "lambda_" ++ show nextFun
+            newFuns = (fn, Function params body) : funs
+        in runElab newFuns (nextFun + 1) (k (FunName fn))
     
     where
         -- `decompose` is used to decompose a goal into a means of elaborating
@@ -198,8 +214,8 @@ statementValid d (TermDecl (TermName tmn) a) =
 statementValid d (TermDef (TermName tmn) m) =
     case lookup tmn d of
         Just (TermNameExists a Nothing) -> do
-            goal (CheckTerm d [] a m)
-            return ((tmn, TermNameExists a (Just m)):d)
+            m' <- goal (CheckTerm d [] a m)
+            return ((tmn, TermNameExists a (Just m')):d)
         Nothing -> throw (TermNameNotDeclared (TermName tmn))
         Just _ -> throw (TermNameAlreadyUsed (TermName tmn))
 
@@ -260,18 +276,42 @@ checkTerm d g a m@(Con (ConName cn) ms) =
             then throw (ConstructorMismatchReturnType a a' m)
             else if length ms /= length bs
             then throw (ConstructorMismatchNumberArguments m (length ms) (length bs))
-            else zipWithM_
-                   (\bi mi -> goal (CheckTerm d g bi mi))
-                   bs
-                   ms
+            else do
+                ms' <- zipWithM
+                    (\bi mi -> goal (CheckTerm d g bi mi))
+                    bs
+                    ms
+                return (Core.Con (ConName cn) ms')
         Just _ -> throw (NameNotAConName cn)
         Nothing -> throw (ConNameNotDeclared cn)
 checkTerm d g (FunTy a b) (Lambda x m) =
-    goal (CheckTerm d ((x,a):g) b m)
+    -- m' <- goal (CheckTerm d ((x,a):g) b m)
+    checkLambda d g a b x m
 checkTerm d g a m =
     do
-        b <- goal (SynthesizeTerm d g m)
+        (m', b) <- goal (SynthesizeTerm d g m)
         when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+        return m'
+
+checkLambda :: Declarations
+            -> Context
+            -> Type
+            -> Type
+            -> VarName
+            -> Term
+            -> Elab Core.Term
+checkLambda d g a b x m =
+    do
+        m' <- goal (CheckTerm d ((x,a):g) b m)
+        let closedVars = nub (Core.freeVars m') \\ [x]
+            params = closedVars ++ [x]
+        fn <- newFunction params m'
+        return (foldl Core.Apply (Core.Fun fn) (map Core.Var closedVars))
+
+-- (\x -> y) 1
+
+-- func lambda_0(y,x) { return y; }
+-- $$lambda_0 y 1
 
 
 -- [ D ; G !- M syn A true ]
@@ -308,11 +348,11 @@ synthesizeTerm d g m@(Con (ConName cn) ms) =
             if length ms /= length bs
             then throw (ConstructorMismatchNumberArguments m (length ms) (length bs))
             else do
-                zipWithM_
-                   (\bi mi -> goal (CheckTerm d g bi mi))
-                   bs
-                   ms
-                return a
+                ms' <- zipWithM
+                        (\bi mi -> goal (CheckTerm d g bi mi))
+                        bs
+                        ms
+                return (Core.Con (ConName cn) ms', a)
         Just _ -> throw (NameNotAConName cn)
         Nothing -> throw (ConNameNotDeclared cn)
 
@@ -320,38 +360,40 @@ synthesizeTerm d g m@(Case ms cls) =
     case cls of
         [] -> throw (CaseStatementNoClauses m)
         _ -> do
-            as <- mapM (goal . SynthesizeTerm d g) ms
-            bs <- mapM (goal . CheckClause d g as) cls
+            msas' <- mapM (goal . SynthesizeTerm d g) ms
+            let (ms', as) = unzip msas'
+            clsbs' <- mapM (goal . CheckClause d g as) cls
+            let (cls', bs) = unzip clsbs'
             let b = head bs
             if (any (b /=) bs)
                 then throw (MismatchedClauseTypes m)
-                else return b
+                else return (Core.Case ms' cls', b)
 
 
 synthesizeTerm d g m'@(Apply m n) =
     do
-        t <- goal (SynthesizeTerm d g m)
+        (m'', t) <- goal (SynthesizeTerm d g m)
         case t of
             FunTy a b ->
                 do
-                    goal (CheckTerm d g a n)
-                    return b
+                    n' <- goal (CheckTerm d g a n)
+                    return (Core.Apply m'' n', b)
             _ -> throw (ApplicationNonFunctionType m' t)
 
 synthesizeTerm d g (Ann m a) =
     do
         goal (TypeValid d a)
-        goal (CheckTerm d g a m)
-        return a
+        m' <- goal (CheckTerm d g a m)
+        return (m', a)
 
 synthesizeTerm d g (Var vn) =
     case lookup vn g of
-        Just a -> return a
+        Just a -> return (Core.Var vn, a)
         Nothing -> throw (UnknownVariable vn)
 
 synthesizeTerm d g (DefVar (TermName tn)) =
     case lookup tn d of
-        Just (TermNameExists a _) -> return a
+        Just (TermNameExists a _) -> return (Core.DefVar (TermName tn), a)
         Nothing -> throw (TermNameNotDeclared (TermName tn))
 
 synthesizeTerm d g m =
@@ -376,8 +418,10 @@ checkClause d g as cl@(Clause ps n) =
     if length ps /= length as
     then throw (MismatchedPatternLength cl (length ps) (length as))
     else do
-        gs' <- zipWithM (\pi ai -> goal (CheckPattern d g pi ai)) ps as 
-        goal (SynthesizeTerm d (g ++ concat gs') n)
+        psgs' <- zipWithM (\pi ai -> goal (CheckPattern d g pi ai)) ps as 
+        let  (ps', gs') = unzip psgs'
+        (n', b) <- goal (SynthesizeTerm d (g ++ concat gs') n)
+        return (Core.Clause ps' n', b)
 
 
 -- [ D ; G !- P : A pattern G' ]
@@ -412,10 +456,11 @@ checkPattern d g p@(ConPat (ConName cn) ps) a =
             in if vs /= fvs
             then throw (RepeatedPatternVariables p (vs \\ fvs))
             else do
-                gs' <- zipWithM (\pi bi -> goal (CheckPattern d g pi bi)) ps bs
-                return (concat gs')
+                psgs' <- zipWithM (\pi bi -> goal (CheckPattern d g pi bi)) ps bs
+                let (ps', gs') = unzip psgs'
+                return (Core.ConPat (ConName cn) ps', concat gs')
         Just _ -> throw (NameNotAConName cn)
         Nothing -> throw (ConNameNotDeclared cn)
 
 checkPattern d g (VarPat vn) a =
-    return [(vn, a)]
+    return (Core.VarPat vn, [(vn, a)])

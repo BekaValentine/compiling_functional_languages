@@ -1,0 +1,251 @@
+Build profile: -w ghc-9.4.8 -O1
+In order, the following will be built (use -v for more details):
+ - compiling-functional-languages-0.1.0.0 (exe:compiling-functional-languages) (file app/RealLanguage/Elaboration.hs changed)
+Preprocessing executable 'compiling-functional-languages' for compiling-functional-languages-0.1.0.0..
+Building executable 'compiling-functional-languages' for compiling-functional-languages-0.1.0.0..
+[22 of 23] Compiling RealLanguage.Elaboration ( app/RealLanguage/Elaboration.hs, /mnt/ultralaser_home/Projects/compiling_functional_languages/dist-newstyle/build/x86_64-linux/ghc-9.4.8/compiling-functional-languages-0.1.0.0/x/compiling-functional-languages/build/compiling-functional-languages/compiling-functional-languages-tmp/RealLanguage/Elaboration.o ) [Source file changed]
+
+app/RealLanguage/Elaboration.hs:263:18: error:
+    • Couldn't match type ‘[Core.Term]’ with ‘Core.Term’
+      Expected: Elab Core.Term
+        Actual: Operational ElabInstr [Core.Term]
+    • In the expression:
+        zipWithM (\ bi mi -> goal (CheckTerm d g bi mi)) bs ms
+      In the expression:
+        if length ms /= length bs then
+            throw
+              (ConstructorMismatchNumberArguments m (length ms) (length bs))
+        else
+            zipWithM (\ bi mi -> goal (CheckTerm d g bi mi)) bs ms
+      In the expression:
+        if a /= a' then
+            throw (ConstructorMismatchReturnType a a' m)
+        else
+            if length ms /= length bs then
+                throw
+                  (ConstructorMismatchNumberArguments m (length ms) (length bs))
+            else
+                zipWithM (\ bi mi -> goal (CheckTerm d g bi mi)) bs ms
+    |
+263 |             else zipWithM
+    |                  ^^^^^^^^...
+
+app/RealLanguage/Elaboration.hs:274:9: error:
+    • Couldn't match type ‘()’ with ‘Core.Term’
+      Expected: Operational ElabInstr Core.Term
+        Actual: Operational ElabInstr ()
+    • In a stmt of a 'do' block:
+        when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+      In the expression:
+        do b <- goal (SynthesizeTerm d g m)
+           when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+      In an equation for ‘checkTerm’:
+          checkTerm d g a m
+            = do b <- goal (SynthesizeTerm d g m)
+                 when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+    |
+274 |         when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+app/RealLanguage/Elaboration.hs:274:20: error:
+    • Couldn't match expected type ‘Type’
+                  with actual type ‘(Core.Term, Type)’
+    • In the second argument of ‘(/=)’, namely ‘b’
+      In the first argument of ‘when’, namely ‘(a /= b)’
+      In the first argument of ‘($)’, namely ‘when (a /= b)’
+    |
+274 |         when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+    |                    ^
+
+app/RealLanguage/Elaboration.hs:274:62: error:
+    • Couldn't match expected type ‘Type’
+                  with actual type ‘(Core.Term, Type)’
+    • In the second argument of ‘DirectionChangeTypeMismatch’, namely
+        ‘b’
+      In the first argument of ‘throw’, namely
+        ‘(DirectionChangeTypeMismatch a b m)’
+      In the second argument of ‘($)’, namely
+        ‘throw (DirectionChangeTypeMismatch a b m)’
+    |
+274 |         when (a /= b) $ throw (DirectionChangeTypeMismatch a b m)
+    |                                                              ^
+
+app/RealLanguage/Elaboration.hs:315:24: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the first argument of ‘return’, namely ‘a’
+      In a stmt of a 'do' block: return a
+      In the expression:
+        do zipWithM_ (\ bi mi -> goal (CheckTerm d g bi mi)) bs ms
+           return a
+    |
+315 |                 return a
+    |                        ^
+
+app/RealLanguage/Elaboration.hs:324:48: error:
+    • Couldn't match type ‘(Core.Term, Type)’ with ‘Type’
+      Expected: [Type]
+        Actual: [(Core.Term, Type)]
+    • In the third argument of ‘CheckClause’, namely ‘as’
+      In the second argument of ‘(.)’, namely ‘CheckClause d g as’
+      In the first argument of ‘mapM’, namely
+        ‘(goal . CheckClause d g as)’
+    |
+324 |             bs <- mapM (goal . CheckClause d g as) cls
+    |                                                ^^
+
+app/RealLanguage/Elaboration.hs:328:29: error:
+    • Couldn't match type ‘Core.Clause’ with ‘Core.Term’
+      Expected: (Core.Term, Type)
+        Actual: (Core.Clause, Type)
+    • In the first argument of ‘return’, namely ‘b’
+      In the expression: return b
+      In a stmt of a 'do' block:
+        if (any (b /=) bs) then
+            throw (MismatchedClauseTypes m)
+        else
+            return b
+    |
+328 |                 else return b
+    |                             ^
+
+app/RealLanguage/Elaboration.hs:335:13: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the pattern: FunTy a b
+      In a case alternative:
+          FunTy a b
+            -> do goal (CheckTerm d g a n)
+                  return b
+      In a stmt of a 'do' block:
+        case t of
+          FunTy a b
+            -> do goal (CheckTerm d g a n)
+                  return b
+          _ -> throw (ApplicationNonFunctionType m' t)
+    |
+335 |             FunTy a b ->
+    |             ^^^^^^^^^
+
+app/RealLanguage/Elaboration.hs:338:28: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the first argument of ‘return’, namely ‘b’
+      In a stmt of a 'do' block: return b
+      In the expression:
+        do goal (CheckTerm d g a n)
+           return b
+    |
+338 |                     return b
+    |                            ^
+
+app/RealLanguage/Elaboration.hs:339:55: error:
+    • Couldn't match expected type ‘Type’
+                  with actual type ‘(Core.Term, Type)’
+    • In the second argument of ‘ApplicationNonFunctionType’, namely
+        ‘t’
+      In the first argument of ‘throw’, namely
+        ‘(ApplicationNonFunctionType m' t)’
+      In the expression: throw (ApplicationNonFunctionType m' t)
+    |
+339 |             _ -> throw (ApplicationNonFunctionType m' t)
+    |                                                       ^
+
+app/RealLanguage/Elaboration.hs:345:16: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the first argument of ‘return’, namely ‘a’
+      In a stmt of a 'do' block: return a
+      In the expression:
+        do goal (TypeValid d a)
+           goal (CheckTerm d g a m)
+           return a
+    |
+345 |         return a
+    |                ^
+
+app/RealLanguage/Elaboration.hs:349:26: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the first argument of ‘return’, namely ‘a’
+      In the expression: return a
+      In a case alternative: Just a -> return a
+    |
+349 |         Just a -> return a
+    |                          ^
+
+app/RealLanguage/Elaboration.hs:354:45: error:
+    • Couldn't match expected type ‘(Core.Term, Type)’
+                  with actual type ‘Type’
+    • In the first argument of ‘return’, namely ‘a’
+      In the expression: return a
+      In a case alternative: Just (TermNameExists a _) -> return a
+    |
+354 |         Just (TermNameExists a _) -> return a
+    |                                             ^
+
+app/RealLanguage/Elaboration.hs:380:15: error:
+    • Couldn't match type ‘Core.Term’ with ‘Core.Clause’
+      Expected: Goal (Core.Clause, Type)
+        Actual: Goal (Core.Term, Type)
+    • In the first argument of ‘goal’, namely
+        ‘(SynthesizeTerm d (g ++ concat gs') n)’
+      In a stmt of a 'do' block:
+        goal (SynthesizeTerm d (g ++ concat gs') n)
+      In the expression:
+        do gs' <- zipWithM (\ pi ai -> goal (CheckPattern d g pi ai)) ps as
+           goal (SynthesizeTerm d (g ++ concat gs') n)
+    |
+380 |         goal (SynthesizeTerm d (g ++ concat gs') n)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+app/RealLanguage/Elaboration.hs:380:45: error:
+    • Couldn't match type: (Core.Pattern, Context)
+                     with: [(VarName, Type)]
+      Expected: [[(VarName, Type)]]
+        Actual: [(Core.Pattern, Context)]
+    • In the first argument of ‘concat’, namely ‘gs'’
+      In the second argument of ‘(++)’, namely ‘concat gs'’
+      In the second argument of ‘SynthesizeTerm’, namely
+        ‘(g ++ concat gs')’
+    |
+380 |         goal (SynthesizeTerm d (g ++ concat gs') n)
+    |                                             ^^^
+
+app/RealLanguage/Elaboration.hs:416:25: error:
+    • Couldn't match expected type: (Core.Pattern, Context)
+                  with actual type: [a0]
+    • In the first argument of ‘return’, namely ‘(concat gs')’
+      In a stmt of a 'do' block: return (concat gs')
+      In the expression:
+        do gs' <- zipWithM (\ pi bi -> goal (CheckPattern d g pi bi)) ps bs
+           return (concat gs')
+    |
+416 |                 return (concat gs')
+    |                         ^^^^^^^^^^
+
+app/RealLanguage/Elaboration.hs:416:32: error:
+    • Couldn't match type: (Core.Pattern, Context)
+                     with: [a0]
+      Expected: [[a0]]
+        Actual: [(Core.Pattern, Context)]
+    • In the first argument of ‘concat’, namely ‘gs'’
+      In the first argument of ‘return’, namely ‘(concat gs')’
+      In a stmt of a 'do' block: return (concat gs')
+    |
+416 |                 return (concat gs')
+    |                                ^^^
+
+app/RealLanguage/Elaboration.hs:421:12: error:
+    • Couldn't match expected type: (Core.Pattern, Context)
+                  with actual type: [(VarName, Type)]
+    • In the first argument of ‘return’, namely ‘[(vn, a)]’
+      In the expression: return [(vn, a)]
+      In an equation for ‘checkPattern’:
+          checkPattern d g (VarPat vn) a = return [(vn, a)]
+    |
+421 |     return [(vn, a)]
+    |            ^^^^^^^^^
+Error: cabal: Failed to build exe:compiling-functional-languages from
+compiling-functional-languages-0.1.0.0.
+
